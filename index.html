@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Prepline Pipeline · Autoprod prototype</title>
+<style>
+:root{--acc:#1f4e8c;--ok:#2e7d5b;--mut:#5b6476;--line:#dde2ea}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f4f6fa;color:#1d2433}
+header{background:linear-gradient(90deg,#14305a,#1f4e8c);color:#fff;padding:12px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+header h1{font-size:18px;margin:0}.badge{font-size:11px;background:#ffffff26;padding:3px 8px;border-radius:10px}.brand{margin-left:auto;font-weight:700}
+nav{display:flex;gap:6px;padding:10px 14px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{flex:none;border:1px solid var(--line);background:#fff;border-radius:18px;padding:6px 12px;font:inherit;cursor:pointer;color:var(--mut)}
+nav button.on{background:var(--acc);color:#fff;border-color:var(--acc)}nav button.done{border-color:var(--ok);color:var(--ok)}nav button:disabled{opacity:.45;cursor:not-allowed}
+main{max-width:1100px;margin:0 auto;padding:16px}.page{display:none}.page.on{display:block}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}h2{margin:0 0 6px;color:var(--acc);font-size:22px}
+.drop{border:2px dashed #9fb3d1;border-radius:12px;padding:22px;text-align:center;background:#f8fbff;cursor:pointer}.drop.over{background:#e3eefc;border-color:var(--acc)}
+.btn{border:0;border-radius:8px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--acc);color:#fff}.btn.sec{background:#e8edf5;color:#1d2433}.btn.demo{background:#c26a00}
+.btn:disabled{opacity:.45;cursor:not-allowed}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}.mut{color:var(--mut)}.err{color:#b3261e;font-weight:600}
+ul.files{padding-left:18px}.scroll{overflow:auto;max-height:420px}table{border-collapse:collapse;font-size:12.5px}td,th{border:1px solid var(--line);padding:3px 7px;text-align:left;white-space:nowrap}th{background:#eef2f8}
+.pager{display:flex;justify-content:space-between;gap:8px;margin-top:12px}iframe{width:100%;height:860px;border:1px solid var(--line);border-radius:10px;background:#fff}
+@media(max-width:640px){main{padding:10px}h2{font-size:18px}iframe{height:700px}}
+@media print{header,nav,.noprint,.drop,.pager{display:none!important}.page:not(.on){display:none!important}.scroll{max-height:none;overflow:visible}body{background:#fff}.card{border:0}}
+</style></head><body>
+<header><h1>Prepline Pipeline</h1><span class="badge">PROTOTYPE · demo data only</span><span class="brand">Autoprod</span></header>
+<nav id="steps" class="noprint"></nav><main id="main"></main>
+<script src="sorter/vendor/xlsx.full.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const STAGES=[
+ {id:'wo',t:'Work orders',h:'Upload work orders',p:'Your own section work orders (Larder, Sauce, Plated…), as produced by your kitchen system. Excel, CSV or PDF; several files at once. No conversion is done: they are read as they are.',acc:'.xlsx,.xls,.csv,.pdf',demo:['WorkOrder_Larder_DEMO.SYNTHETIC.xlsx','WorkOrder_Sauce_DEMO.SYNTHETIC.xlsx','WorkOrder_Plated_DEMO.SYNTHETIC.xlsx']},
+ {id:'roster',t:'Rosters',h:'Upload rosters',p:'The roster for the same week (Excel or CSV download of the roster sheet). Several files allowed.',acc:'.xlsx,.xls,.csv',demo:['roster-demo.SYNTHETIC.csv']},
+ {id:'pt',t:'Production tools',h:'Upload production tools',p:'The week\'s production tool PDFs.',acc:'.pdf',demo:['PT-demo-larder-sauce.SYNTHETIC.pdf']},
+ {id:'po',t:'POs',h:'Upload purchase orders (POs)',p:'The purchase requisition / PO PDFs that match the production tools. They fill each ingredient\'s Ref # (supplier and delivery date).',acc:'.pdf',demo:['PO-demo-larder.SYNTHETIC.pdf','PO-demo-sauce.SYNTHETIC.pdf']},
+ {id:'prep',t:'Prep list',h:'Prep list conversion',p:'Turns the production tools + POs from steps 3 and 4 into a sorted prep list, using the existing Prepline sorter unchanged. Then sort, edit and print as usual.'}];
+const F={wo:[],roster:[],pt:[],po:[]},T={};let cur=0,converted=false;
+const doneStage=i=>i<4?F[STAGES[i].id].length>0:converted;
+function nav(){$('steps').innerHTML=STAGES.map((s,i)=>`<button id="nav-${s.id}" class="${i===cur?'on':''} ${doneStage(i)?'done':''}" ${i>0&&!STAGES.slice(0,i).every((_,j)=>doneStage(j))?'disabled':''} onclick="go(${i})">${i+1}. ${s.t}${doneStage(i)?' ✓':''}</button>`).join('');
+ STAGES.forEach((s,i)=>{const n=$('next-'+s.id);if(n)n.disabled=!doneStage(i);});}
+function go(i){cur=i;document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('on',j===i));nav();if(STAGES[i].id==='prep')initSorter();scrollTo(0,0);}
+$('main').innerHTML=STAGES.map((s,i)=>`<section class="page" id="page-${s.id}"><div class="card"><h2>Step ${i+1} of 5 · ${s.h}</h2><p class="mut">${s.p}</p>
+${s.acc?`<div class="drop" id="drop-${s.id}" tabindex="0" role="button" aria-label="Drop files or click to choose">Drag files here, or <b>click to choose</b><br><span class="mut">${s.acc}</span><input type="file" id="file-${s.id}" multiple accept="${s.acc}" hidden></div>
+<div class="row noprint"><button class="btn demo" id="demo-${s.id}" onclick="loadDemo('${s.id}')">Use demo files</button><button class="btn sec" id="clear-${s.id}" onclick="clearFiles('${s.id}')">Clear</button><button class="btn sec" id="print-${s.id}" onclick="window.print()">Print</button></div>
+<div id="msg-${s.id}"></div><div id="list-${s.id}"></div><div id="prev-${s.id}"></div>`:
+`<div class="row noprint"><button class="btn" id="convert" onclick="convert()">Convert to prep list</button><button class="btn sec" id="print-prep" onclick="printPrep()">Print prep list</button><span id="msg-prep" class="mut"></span></div><div id="sumprep" class="mut"></div><iframe id="sorter" title="Prep list sorter"></iframe>`}
+<div class="pager"><button class="btn sec" onclick="go(${Math.max(0,i-1)})" ${i?'':'disabled'}>← Back</button>${i<4?`<button class="btn" id="next-${s.id}" onclick="go(${i+1})" disabled>Next: ${STAGES[i+1].t} →</button>`:''}</div></div></section>`).join('');
+async function addFiles(id,list){const s=STAGES.find(x=>x.id===id),ok=s.acc.split(','),bad=[];
+ for(const f of list){const ext='.'+f.name.split('.').pop().toLowerCase();if(!ok.includes(ext)){bad.push(f.name);continue;}if(!F[id].some(x=>x.name===f.name&&x.size===f.size))F[id].push(f);}
+ $('msg-'+id).innerHTML=bad.length?`<p class="err">Not accepted here (${esc(s.acc)}): ${bad.map(esc).join(', ')}</p>`:'';if(id==='pt'||id==='po')converted=false;await render(id);nav();}
+function clearFiles(id){F[id]=[];T[id]=null;converted=false;$('msg-'+id).innerHTML='';render(id);nav();}
+async function readSheet(f){const wb=XLSX.read(await f.arrayBuffer(),{cellDates:true});return wb.SheetNames.map(n=>({n,rows:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:false}).filter(r=>r.some(c=>String(c).trim()))}));}
+async function render(id){const fs=F[id];$('list-'+id).innerHTML=fs.length?`<ul class="files">${fs.map(f=>`<li>${esc(f.name)} <span class="mut">(${(f.size/1024).toFixed(0)} KB)</span></li>`).join('')}</ul>`:'<p class="mut">No files yet.</p>';
+ let h='';for(const f of fs){if(/\.pdf$/i.test(f.name)){h+=`<h3>${esc(f.name)}</h3><p class="mut">PDF ready${id==='wo'?' (shown as is)':' for the prep list conversion (step 5)'}.</p>`;continue;}
+  try{const sh=await readSheet(f);for(const {n,rows} of sh){if(!rows.length)continue;h+=`<h3>${esc(f.name)} · ${esc(n)} <span class="mut">(${rows.length-1} rows)</span></h3><div class="scroll"><table>${rows.slice(0,301).map((r,i)=>`<tr>${r.map(c=>i?`<td>${esc(c)}</td>`:`<th>${esc(c)}</th>`).join('')}</tr>`).join('')}</table></div>`;}}
+  catch(e){h+=`<p class="err">Could not read ${esc(f.name)}: ${esc(e.message)}</p>`;}}
+ $('prev-'+id).innerHTML=h;}
+async function loadDemo(id){const s=STAGES.find(x=>x.id===id);const fs=await Promise.all(s.demo.map(async n=>{const r=await fetch('samples/'+n);return new File([await r.blob()],n);}));await addFiles(id,fs);}
+STAGES.filter(s=>s.acc).forEach(s=>{const d=$('drop-'+s.id),inp=$('file-'+s.id);
+ d.onclick=e=>{if(e.target!==inp)inp.click();};d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inp.click();}};inp.onchange=()=>{addFiles(s.id,[...inp.files]);inp.value='';};
+ d.ondragover=e=>{e.preventDefault();d.classList.add('over');};d.ondragleave=()=>d.classList.remove('over');d.ondrop=e=>{e.preventDefault();d.classList.remove('over');addFiles(s.id,[...e.dataTransfer.files]);};});
+addEventListener('dragover',e=>e.preventDefault());addEventListener('drop',e=>e.preventDefault());
+let sorterReady=null;function initSorter(){if(sorterReady)return sorterReady;const fr=$('sorter');sorterReady=new Promise(r=>{fr.onload=()=>r(fr.contentWindow);});fr.src='sorter/index.html';return sorterReady;}
+async function convert(){const files=[...F.pt,...F.po];if(!F.pt.length){$('msg-prep').textContent='Add production tools in step 3 first.';return;}
+ $('convert').disabled=true;$('msg-prep').textContent='Converting…';const w=await initSorter();
+ for(let i=0;i<80&&!(typeof w.routeFiles==='function');i++)await new Promise(r=>setTimeout(r,100));
+ w.routeFiles(files.map(f=>new File([f],f.name,{type:'application/pdf'})));
+ let last=-1,same=0;for(let n=0;n<240;n++){await new Promise(r=>setTimeout(r,250));const c=w.eval('typeof ROWS==="undefined"?0:ROWS.length');same=(c===last&&c>0)?same+1:0;last=c;if(same>=6)break;}
+ const nr=w.eval('typeof ROWS==="undefined"?0:ROWS.length');converted=nr>0;$('convert').disabled=false;$('msg-prep').textContent=converted?`Prep list ready: ${nr} lines from ${F.pt.length} production tool file(s) and ${F.po.length} PO file(s).`:'No prep lines found. Check the production tool files.';nav();}
+async function printPrep(){const w=await initSorter();if(!converted){$('msg-prep').textContent='Convert first.';return;}if(typeof w.printMasterSummary==='function')w.printMasterSummary();else w.print();}
+go(0);
+</script></body></html>
