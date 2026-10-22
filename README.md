@@ -12,4 +12,7 @@ Five ordered steps, each with drag-and-drop + click upload and Print:
 - Every stage tab is clickable; no stage is required. "Skip to …" moves on without files.
 - Prep list stage takes a spreadsheet or PT/PO PDFs directly.
 - Production tools stage auto-detects PT vs PO in one drop and shows each ingredient's PO pairing (Ref #).
+
+## v3
+- POs merged into the Production tools stage (4 stages). v2 = tag `v2-skippable`, `versions/v2-skippable-113afdc/`.
 - v1 (sequential) is tag `v1-sequential` and `versions/v1-sequential-4a0a649/`.
