@@ -1,4 +1,6 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html>
+<!--! Prepline Pipeline by Autoprod. © 2026 Autoprod. All rights reserved. Not for resale or redistribution. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><title>Prepline Pipeline · Autoprod prototype</title>
 <style>
 :root{--acc:#1f4e8c;--ok:#2e7d5b;--mut:#5b6476;--line:#dde2ea}
@@ -91,4 +93,4 @@ async function prepUpload(list){const ok=['.xlsx','.xls','.csv','.pdf'],bad=[],f
  let last=-1,same=0;for(let n=0;n<240;n++){await wait(250);const c=w.eval('typeof ROWS==="undefined"?0:ROWS.length');same=(c===last&&c>0)?same+1:0;last=c;if(same>=6)break;}
  const nr=w.eval('ROWS.length');converted=nr>0;$('msg-prep').textContent=converted?`Prep list ready: ${nr} lines from ${pdfs.length?pdfs.length+' uploaded PDF(s)':'spreadsheet '+sheet.name}.`:'No prep lines found in that file.';if(bad.length)$('msg-prep').textContent+=' Skipped: '+bad.join(', ');nav();}
 go(0);
-</script></body></html>
+</script><footer class="ap-copy" id="apCopyright" style="text-align:center;margin:24px 12px;font-size:11px;opacity:.75;">© 2026 Autoprod. All rights reserved. Not for resale or redistribution.</footer></body></html>
